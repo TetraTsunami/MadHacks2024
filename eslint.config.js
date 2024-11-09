@@ -6,7 +6,7 @@ import ts from 'typescript-eslint';
 
 export default ts.config(
 	js.configs.recommended,
-	...ts.configs.recommended,
+	...ts.configs.base,
 	...svelte.configs['flat/recommended'],
 	prettier,
 	...svelte.configs['flat/prettier'],
