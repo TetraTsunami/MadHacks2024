@@ -1,0 +1,12 @@
+.* text=auto
+*.css text=auto
+*.html text=auto
+*.js text=auto
+*.json text=auto
+*.lock text=auto
+*.md text=auto
+*.rs text=auto
+*.svelte text=auto
+*.toml text=auto
+*.ts text=auto
+*.txt text=auto

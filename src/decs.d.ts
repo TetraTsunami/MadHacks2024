@@ -1,1 +1,1 @@
-declare module "webgazer"
+declare module 'webgazer'
