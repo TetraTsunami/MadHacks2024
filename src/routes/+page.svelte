@@ -1,25 +1,17 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-  onMount(async () => {
-    eval(await fetch("./GazeCloudAPI.js").then((res) => res.text()));
-  });
-  onMount(() => {
-    setTimeout(() => {
-      console.log("log", GazeCloudAPI);
-      GazeCloudAPI.OnCalibrationComplete = function(){
-        console.log('gaze Calibration Complete')
-      }         
-      GazeCloudAPI.OnCamDenied = function(){ 
-        console.log('camera access denied')  
-      }         
-      GazeCloudAPI.OnResult = console.log;
-      GazeCloudAPI.OnError = function(msg: any){ console.log('err: ' + msg) }
-      GazeCloudAPI.UseClickRecalibration = true;
-    }, 1000);    
+	import webgazer from "webgazer";
+
+  webgazer.setGazeListener(function(data, elapsedTime) {
+    if (data == null) {
+      return;
+    }
+    var xprediction = data.x; //these x coordinates are relative to the viewport
+    var yprediction = data.y; //these y coordinates are relative to the viewport
+    console.log(elapsedTime, xprediction, yprediction); //elapsed time is based on time since begin was called
   });
 </script>
 
 <h1>Welcome to SvelteKit</h1>
 <p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
-<button  type="button" on:click={() => GazeCloudAPI.StartEyeTracking()}>Start</button>
-<button  type="button" on:click={() => GazeCloudAPI.StopEyeTracking()}>Stop</button>
+<button  type="button" on:click={() => webgazer.begin()}>Start</button>
+<button  type="button" on:click={() => webgazer.pause()}>Stop</button>
