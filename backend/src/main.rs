@@ -4,6 +4,8 @@ extern crate rocket;
 use std::collections::HashMap;
 use std::sync::mpsc;
 
+use lazy_static::lazy_static;
+
 use rand::prelude::IteratorRandom;
 use rand::prelude::SliceRandom;
 use rand::Rng;
@@ -24,7 +26,47 @@ pub struct PlayerData {
 
 pub struct Player {
     data: PlayerData,
+    go: PlayerGameObj,
     stream_outbox: Option<Box<mpsc::Sender<String>>>,
+}
+
+
+type TaggedString = Vec<TaggedTok>;
+
+#[derive(Clone)]
+struct TaggedTok {
+    tok: String,
+    pos: String,
+}
+
+pub struct PlayerGameObj {
+    init_q: TaggedString,
+    q_to_hack: Option<TaggedString>,
+    a_to_hack: Option<String>,
+    q_hacked: Option<TaggedString>,
+    votes_gained: i32,
+}
+
+lazy_static! {
+    static ref QUESTIONS: Vec<TaggedString> = vec![
+        vec![
+            TaggedTok { tok: "".to_owned(), pos: "".to_owned() },
+        ],
+    ];
+}
+
+impl PlayerGameObj {
+
+
+    fn new() -> Self {
+        Self {
+            init_q: QUESTIONS.choose(&mut rand::thread_rng()).unwrap().clone(),
+            q_to_hack: None,
+            a_to_hack: None,
+            q_hacked: None,
+            votes_gained: 0,
+        }
+    }
 }
 
 pub struct Game {
@@ -92,6 +134,7 @@ async fn create_game(name: &str, games: &State<Games>) -> Json<ResponseGame> {
                 name: name.to_string(),
                 host: true,
             },
+            go: PlayerGameObj::new(),
             stream_outbox: None,
         }],
     };
@@ -119,8 +162,21 @@ async fn join_game(code: &str, name: &str, games: &State<Games>) -> Option<Json<
             name: name.to_owned(),
             host: false,
         },
+        go: PlayerGameObj::new(),
         stream_outbox: None,
     });
+
+    // assumes player 0 is the host, hopefully this is always the case
+    loop {
+        let outbox_opt = game.players[0].stream_outbox.clone();
+        match outbox_opt {
+            Some(outbox) => {
+                outbox.send(format!("new-player {}", name.to_owned())).unwrap();
+                break;
+            },
+            None => (),
+        }
+    }
 
     Some(Json(ResponseGame {
         code: game.code.to_string(),
@@ -165,12 +221,15 @@ async fn ws_channel(ws: ws::WebSocket, code: &str, pid: &str, games: &State<Game
         .position(|data| data.pid == actual_pid)
         .unwrap();
     game.players[player_index].stream_outbox = Some(Box::new(outbox_tx));
-    ws.channel(move |mut stream| Box::pin(async move {
-        for outbox_msg in outbox_rx {
-            ws_push(&mut stream, outbox_msg).await;
-        }
-        Ok(())
-    }))
+    rocket::tokio::spawn(async move {
+        ws.channel(move |mut stream| Box::pin(async move {
+            // (to debug) ws_push(&mut stream, "hello".to_owned()).await;
+            for outbox_msg in outbox_rx {
+                ws_push(&mut stream, outbox_msg).await;
+            }
+            Ok(())
+        }))
+    }).await.unwrap()
 }
 
 fn broadcast(game: &Game, msg: String) {
