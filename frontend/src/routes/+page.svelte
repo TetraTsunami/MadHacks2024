@@ -3,9 +3,8 @@
 	import { goto } from '$app/navigation';
 	import Input from '$lib/components/ui/input/input.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
-
-	export const roomCode = writable('');
-	export const state = writable('login' as 'login' | 'loading' | 'waiting to start');
+	import { state, roomCode, pid, isRoomCreator, otherPlayers } from './stores';
+	
 	let curState = '';
 	state.subscribe((value) => {
 		curState = value;
@@ -14,40 +13,54 @@
 	let code = '';
 	let error = '';
 
-	async function verifyRoomCode(code: string): Promise<boolean> {
-		try {
-			const response = await fetch('http://localhost:8080/api/v1/room', {
-				method: 'GET',
-				headers: {
-					'Room-Code': code
-				}
-			});
-			if (response.ok) {
-				error = '';
-				return true;
-			} else {
-				error = 'Invalid room code';
-				return false;
-			}
-		} catch (err) {
-			error = 'Error verifying room code';
-			return false;
-		}
-	}
-
 	async function handleJoin() {
 		state.set('loading');
-		if (await verifyRoomCode(code)) {
-			roomCode.set(code);
-			state.set('waiting to start');
-			goto('/waiting');
-		} else {
+		try {
+			const response = await fetch(`http://localhost:8000/api/games/${code}?name=${name}`, {
+				method: 'PUT'
+			});
+			if (response.ok) {
+				const data = await response.json();
+				roomCode.set(data.code);
+				pid.set(data.pid);
+				isRoomCreator.set(false);
+				otherPlayers.set(data.players);
+				state.set('waiting to start');
+				goto('/waiting');
+			} else {
+				const errorData = await response.json();
+				error = errorData.error || 'Invalid room code or name';
+				state.set('login');
+			}
+		} catch (err) {
+			error = 'Error joining the room';
 			state.set('login');
 		}
 	}
 
-	$: if (code.length === 4) {
-		verifyRoomCode(code);
+	async function handleCreate() {
+		state.set('loading');
+		try {
+			const response = await fetch(`http://localhost:8000/api/games?name=${name}`, {
+				method: 'POST'
+			});
+			if (response.ok) {
+				const data = await response.json();
+				roomCode.set(data.code);
+				pid.set(data.pid);
+				otherPlayers.set(data.players);
+				isRoomCreator.set(true);
+				state.set('waiting to start');
+			
+				goto('/game/waiting');
+			} else {
+				error = 'Error creating room';
+				state.set('login');
+			}
+		} catch (err) {
+			error = 'Error creating room';
+			state.set('login');
+		}
 	}
 </script>
 
@@ -66,6 +79,19 @@
 			<Input id="name" type="text" bind:value={name} />
 		</div>
 		<Button type="submit">Join
+			{#if (curState === 'loading')}
+				<span class="spinner ml-2 animate-spin" />
+			{/if}
+		</Button>
+	</form>
+
+	<h1 class="mb-8 mt-8 text-xl font-bold">Create a Room</h1>
+	<form on:submit|preventDefault={handleCreate} class="flex flex-col gap-4">
+		<div>
+			<label class="text-sm italic" for="name">Name:</label>
+			<Input id="name" type="text" bind:value={name} />
+		</div>
+		<Button type="submit">Create
 			{#if (curState === 'loading')}
 				<span class="spinner ml-2 animate-spin" />
 			{/if}
