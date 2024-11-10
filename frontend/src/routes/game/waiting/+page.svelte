@@ -33,7 +33,7 @@
 			return;
 		}
 
-		ws = new WebSocket(`ws://localhost:8000/api/games/${currentRoomCode}/${currentPid}/ws`);
+		ws = new WebSocket(`ws://residual.at/api/games/${currentRoomCode}/${currentPid}/ws`);
 
 		ws.onmessage = (event) => {
 			handleWebsocketMessage(event.data);
@@ -43,7 +43,7 @@
 
 	async function startGame() {
 		try {
-			const response = await fetch(`http://localhost:8000/api/games/${currentRoomCode}/start`, {
+			const response = await fetch(`/api/games/${currentRoomCode}/start`, {
 				method: 'POST'
 			});
 			if (!response.ok) {

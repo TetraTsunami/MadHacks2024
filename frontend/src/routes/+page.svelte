@@ -16,7 +16,7 @@
 	async function handleJoin() {
 		state.set('loading');
 		try {
-			const response = await fetch(`http://localhost:8000/api/games/${code}?name=${name}`, {
+			const response = await fetch(`/api/games/${code}?name=${name}`, {
 				method: 'PUT'
 			});
 			if (response.ok) {
@@ -40,7 +40,7 @@
 	async function handleCreate() {
 		state.set('loading');
 		try {
-			const response = await fetch(`http://localhost:8000/api/games?name=${name}`, {
+			const response = await fetch(`/api/games?name=${name}`, {
 				method: 'POST'
 			});
 			if (response.ok) {
