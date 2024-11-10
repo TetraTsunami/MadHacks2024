@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate rocket;
 
+use std::collections::HashMap;
+
 use rand::prelude::IteratorRandom;
 use rand::prelude::SliceRandom;
 use rand::Rng;
@@ -9,13 +11,12 @@ use rocket::outcome::IntoOutcome;
 use rocket::outcome::Outcome::Success;
 use rocket::request::{FromParam, FromRequest};
 use rocket::serde::json::Json;
-use rocket::tokio::sync::Mutex;
 use rocket::State;
+use rocket::tokio::sync::Mutex;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use uuid::Uuid;
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Player {
     pid: Uuid,
     name: String,
@@ -85,6 +86,7 @@ pub struct Games(Mutex<HashMap<String, Game>>);
 struct ResponseGame {
     code: String,
     pid: Uuid,
+    players: Vec<Player>,
 }
 
 #[post("/games/<name>")]
@@ -116,17 +118,28 @@ async fn create_game(name: &str, games: &State<Games>) -> Json<ResponseGame> {
 
     games.0.lock().await.insert(code.clone(), game);
 
-    Json(ResponseGame { code, pid })
+    Json(ResponseGame {
+        code,
+        pid,
+        players: Vec::new(),
+    })
 }
 
-#[get("/games/<code>")]
-async fn get_game(code: &str, games: &State<Games>) -> Option<Json<ResponseGame>> {
+#[get("/games/<code>/<name>")]
+async fn get_game(code: &str, name: &str, games: &State<Games>) -> Option<Json<ResponseGame>> {
     let mut games = games.0.lock().await;
     let mut game = games.get_mut(code)?;
 
+    let pid = Uuid::new_v4();
+    game.players.push(Player {
+        pid,
+        name: name.to_owned(),
+    });
+
     Some(Json(ResponseGame {
         code: game.code.to_string(),
-        pid: Uuid::new_v4(),
+        pid,
+        players: game.players.clone(),
     }))
 }
 
