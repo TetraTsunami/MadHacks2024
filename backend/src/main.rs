@@ -20,6 +20,7 @@ use uuid::Uuid;
 pub struct Player {
     pid: Uuid,
     name: String,
+    host: bool,
 }
 
 #[derive(Clone)]
@@ -113,15 +114,16 @@ async fn create_game(name: &str, games: &State<Games>) -> Json<ResponseGame> {
         players: vec![Player {
             pid,
             name: name.to_string(),
+            host: true,
         }],
     };
 
-    games.0.lock().await.insert(code.clone(), game);
+    games.0.lock().await.insert(code.clone(), game.clone());
 
     Json(ResponseGame {
         code,
         pid,
-        players: Vec::new(),
+        players: game.players.clone(),
     })
 }
 
@@ -134,6 +136,7 @@ async fn get_game(code: &str, name: &str, games: &State<Games>) -> Option<Json<R
     game.players.push(Player {
         pid,
         name: name.to_owned(),
+        host: false,
     });
 
     Some(Json(ResponseGame {
