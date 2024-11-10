@@ -232,6 +232,29 @@ async fn ws_channel(ws: ws::WebSocket, code: &str, pid: &str, games: &State<Game
     }).await.unwrap()
 }
 
+use rocket::http::Header;
+use rocket::{Request, Response};
+use rocket::fairing::{Fairing, Info, Kind};
+
+pub struct CORS;
+
+#[rocket::async_trait]
+impl Fairing for CORS {
+    fn info(&self) -> Info {
+        Info {
+            name: "Attaching CORS headers to responses",
+            kind: Kind::Response
+        }
+    }
+
+    async fn on_response<'r>(&self, _request: &'r Request<'_>, response: &mut Response<'r>) {
+        response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
+        response.set_header(Header::new("Access-Control-Allow-Methods", "POST, GET, PATCH, OPTIONS"));
+        response.set_header(Header::new("Access-Control-Allow-Headers", "*"));
+        response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
+    }
+}
+
 fn broadcast(game: &Game, msg: String) {
     for player in &game.players {
         if let Some(outbox) = &player.stream_outbox {
@@ -243,10 +266,11 @@ fn broadcast(game: &Game, msg: String) {
 #[launch]
 fn rocket() -> _ {
     rocket::build()
+        .attach(CORS)
         .manage(Games(HashMap::new().into()))
         .mount("/api", routes![
             create_game, join_game,
             start_game,
-            ws_channel,
+            ws_channel
         ])
 }

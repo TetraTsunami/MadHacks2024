@@ -24,9 +24,8 @@
 				roomCode.set(data.code);
 				pid.set(data.pid);
 				isRoomCreator.set(false);
-				otherPlayers.set(data.players);
 				state.set('waiting to start');
-				goto('/waiting');
+				goto('/game/waiting');
 			} else {
 				const errorData = await response.json();
 				error = errorData.error || 'Invalid room code or name';
@@ -48,7 +47,7 @@
 				const data = await response.json();
 				roomCode.set(data.code);
 				pid.set(data.pid);
-				otherPlayers.set(data.players);
+				otherPlayers.set([name]);
 				isRoomCreator.set(true);
 				state.set('waiting to start');
 			
@@ -69,7 +68,7 @@
 	<form on:submit|preventDefault={handleJoin} class="flex flex-col gap-4">
 		<div>
 			<label class="text-sm italic" for="room-code">Room Code:</label>
-			<Input id="room-code" type="text" bind:value={code} maxlength={4} />
+			<Input id="room-code" type="text" bind:value={code} />
 		</div>
 		{#if error}
 			<div class="text-red-400">{error}</div>

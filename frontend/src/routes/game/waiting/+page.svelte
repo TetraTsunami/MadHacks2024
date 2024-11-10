@@ -3,6 +3,7 @@
 	import { roomCode, isRoomCreator, pid, otherPlayers, webSocket } from '../../stores';
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
+	import { handleWebsocketMessage } from '../../lib';
 
 	let currentRoomCode = '';
 	let currentPid = '';
@@ -35,9 +36,7 @@
 		ws = new WebSocket(`ws://localhost:8000/api/games/${currentRoomCode}/${currentPid}/ws`);
 
 		ws.onmessage = (event) => {
-			if (event.data === 'start') {
-				goto('/game');
-			}
+			handleWebsocketMessage(event.data);
 		};
 		webSocket.set(ws);
 	});
@@ -57,19 +56,22 @@
 	}
 </script>
 
-<div class="flex w-full flex-col items-center">
+<div class="flex w-full flex-col items-center gap-2">
 	<h1 class="mb-8 text-xl font-bold">Waiting Room</h1>
   <p>Room Code: {currentRoomCode}</p>
+	<Button on:click={() => navigator.clipboard.writeText(currentRoomCode)}>Copy Room Code</Button>
 	{#if currentIsRoomCreator}
 		<Button on:click={startGame}>Start Game</Button>
 	{/if}
 	<p class="mt-4">Waiting for other players to join...</p>
-  <div class="text-left">
-    <h2 class="text-lg">Current players</h2>
-    <ul>
-      {#each currentOtherPlayers as player}
-        <li>{player}</li>
-      {/each}
-    </ul>
-  </div>
+	{#if currentIsRoomCreator}
+		<div class="rounded-xl border border-foreground p-4 text-left">
+			<h2 class="text-lg">Current players</h2>
+			<ul class="list-disc pl-4">
+				{#each currentOtherPlayers as player}
+					<li>{player}</li>
+				{/each}
+			</ul>
+		</div>
+	{/if}
 </div>
